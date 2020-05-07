@@ -1,0 +1,67 @@
+#Запускаем необходимые библиотеки
+library('keras')
+library('tensorflow')
+
+# Загружаем базу данных с рукописными числами
+mnist <- dataset_mnist()
+
+#Разбиваем эту базу на тренировочные и тестовые объекты,
+#а их, в свою очередь, на массивы рукописными числами и сами числа
+train_images <- mnist$train$x
+train_labels <- mnist$train$y
+test_images <- mnist$test$x
+test_labels <- mnist$test$y
+
+#Строим архитектуру нейронной сети
+network <- keras_model_sequential()%>%
+  layer_dense (units=512, activation='relu', input_shape = c(28*28)) %>%
+  layer_dense(units=10, activation='softmax')
+
+#Добавляем некоторые компоненты к модели
+network %>% compile(
+  optimizer='rmsprop',
+  loss='categorical_crossentropy',
+  metrics=c('accuracy'))
+
+#Меняем массивы на матрицы с заданной размерностью
+train_images <- array_reshape(train_images, c(60000, 28*28))
+
+#Меняем область значений
+train_images <- train_images/255
+
+#То же проделываем с тестовыми данными
+test_images <- array_reshape(test_images, c(10000, 28*28))
+test_images <- test_images/255
+
+#Создаем категории для ярлыков
+train_labels <- to_categorical(train_labels)
+test_labels <-to_categorical(test_labels)
+
+#Тренируем нейронную сеть на 15 эпохах
+network %>% fit(train_images, train_labels, epochs=15, batch_size=128)
+
+#Точность полученной модели составила 99,98%
+
+# Применяем полученную модель к тестовым данным
+metric <- network %>% evaluate(test_images, test_labels)
+
+# Точность по тестовой выборке составила 98,21%
+
+# Предсказываем первые и последние 10 значений из тестовой выборки
+prediction1 <- network %>% predict_classes(test_images[1:10,])
+prediction2 <- network %>% predict_classes(test_images[9991:10000,])
+
+# Выводим реальные числа, отраженные в первых и последних 10 матрицах
+test_labels1 <-mnist$test$y[1:10]
+test_labels2 <-mnist$test$y[9991:10000]
+
+# Строим таблицу с полученными данными
+tabl <- t(rbind(prediction1, test_labels1, prediction2, test_labels2))
+
+# Из таблицы видно, что все предсказанные результаты совпали с реальными
+
+# Отображаем полученные рукописные числа из последних 10 матриц
+for (i in 9991:10000) {
+  image(as.matrix(mnist$test$x[i, 1:28, 1:28]))
+  }
+
